@@ -62,7 +62,10 @@ void Application::getNewFile() {
             Glib::RefPtr<Gio::File> ffile = dialog.get_file();
             std::string file_path = ffile->get_path();
             
-            readerWav.onReadFileStructure(this, file_path);
+            mainThread = new std::thread([this, file_path] 
+            {
+                readerWav.onReadFileStructure(this, file_path);
+            });
             
             break;
             }
