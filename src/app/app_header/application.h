@@ -2,11 +2,17 @@
 
 #include <gtkmm.h>
 #include <iostream>
+#include <string.h>
+#include <cstdlib>
 
 #include <chrono>
 #include <thread>
 
 #include "reader_wav.h"
+
+#include </usr/include/alsa/asoundlib.h>
+
+#define PCM_DEVICE "default"
 
 class Application : public Gtk::ApplicationWindow, public IReaderWav {
 public:
@@ -14,7 +20,9 @@ public:
     virtual ~Application() = default;
     
     // virtual function wav
-    void onFileStructure(std::string ite_name);
+    void onFileStructure(WAV file);
+    void onFileAllSampleToPlay(uint8_t* all_sample_sound, std::vector<int> offsetItem);
+    void onSampleAmpl(int* valueAmpl);
     
     
 private:

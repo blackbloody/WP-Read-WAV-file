@@ -25,8 +25,14 @@ FILE (GLOB_RECURSE SOURCE_LIBS_READER_WAV src/reader_wav/*.cpp)
 add_library(LIBS_READER_WAV SHARED ${SOURCE_LIBS_READER_WAV})
 target_include_directories(LIBS_READER_WAV PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/reader_wav )
 
+
+
 add_executable(${CMAKE_PROJECT_NAME} src/main.cpp ${SOURCE_LIBS})
+
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/app/app_header )
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/app/models )
+
+target_link_libraries(${CMAKE_PROJECT_NAME} LIBS_READER_WAV )
 target_link_libraries(${CMAKE_PROJECT_NAME} LIBS_READER_WAV )
 target_link_libraries(${CMAKE_PROJECT_NAME} ${GTKMM_LIBRARIES})
 

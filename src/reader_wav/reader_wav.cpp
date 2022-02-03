@@ -26,85 +26,84 @@ void ReaderWav::onReadFileStructure(IReaderWav* cc, const std::string file_name)
 		addr = static_cast<uint8_t*>(mmap(NULL, fileInfo.st_size, PROT_READ, MAP_SHARED, fd, 0));
 	}
     
+    WAV obj;
+    
     size_t offset = 0;
     
     std::cout << "Size Whole File: " << fileInfo.st_size << "\n";
     // ------ WAV Structure
-    std::string chunkID = convertToASCII(getHexOnBufferByte(addr, offset, 4, 4, false));
-    long chunkSize = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
-    std::string filedFormat = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
+    obj.chunk_id = convertToASCII(getHexOnBufferByte(addr, offset, 4, 4, false));
+    obj.chunk_size = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.chunk_format = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
     
     // ------ Format SubChunk
-    std::string sbChunkID = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
-    long sbChunkSize = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
-    long sbFiledFormat = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
-    long sbNumChannel = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
-    long sbSampleRate = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
-    long sbByteRate = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
-    long sbBlockAlign = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
-    long sbBitPerSample = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.sub_chunk_id = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
+    obj.sub_chunk_size = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.sub_chunk_format = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.channel = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.sample_rate = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.byte_rate = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.block_align = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.bit_per_sample = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
     
-    std::cout << "Chunk: " << chunkID << "\n";
-    std::cout << "Chunk Size: " << chunkSize << "\n";
-    std::cout << "Chunk File Format: " << filedFormat << "\n";
-    
-    std::cout << "Sub Chunk ID: " << sbChunkID << "\n";
-    std::cout << "Sub Chunk Size: " << sbChunkSize << "\n";
-    std::cout << "Sub Chunk File Format: " << sbFiledFormat << "\n";
-    std::cout << "Num Channel: " << sbNumChannel << "\n";
-    std::cout << "Sample Rate: " << sbSampleRate << "\n";
-    std::cout << "Byte Rate: " << sbByteRate << "\n";
-    std::cout << "Block Align: " << sbBlockAlign << "\n";
-    std::cout << "Bits Per Sample: " << sbBitPerSample << "\n";
-    
-    size_t valBeforeData = offset;
-    
-    bool isFirstStepCan = true;
-    std::string aaa = "";
-    while (offset < 1000) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
-            aaa = "";
-            aaa = getHexOnBufferByte(addr, offset, offset + 4, 4, false);
-            if (aaa == "64617461" || aaa == "44415441") {
-                break;
-            }
-            
-        }
-    }
-    offset -= 4;
+    offset = findOffsetDataHeader(addr, offset, 0);
     std::string dataChunkID = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
-    if (dataChunkID == "data" || dataChunkID == "DATA") {
-        isFirstStepCan = true;
-    }
-    else
-        isFirstStepCan = false;
+    obj.data_chunk_size = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.offset_first_sample = offset;
     
-    offset = valBeforeData;
+    size_t containerCount = (obj.duration_milis() / 1000) + 1;
+    size_t sizeAllSample = obj.num_sample_per_second() * obj.bytes_per_sample();
+    std::vector<int> offsetItem;
+    offsetItem.reserve(containerCount);
+    for (size_t i = 0; i < containerCount; i++) 
+    {
+        offsetItem.push_back(offset);
+        std::cout << "Sample Offset " << i << ": " << offset << "\n";
+        offset += sizeAllSample;
+    }    
+
+    //uint8_t* allSample = new uint8_t[sizeAllSample * containerCount];
+    //memcpy(allSample, addr + obj.offset_first_sample, sizeAllSample * containerCount);
     
-    if (!isFirstStepCan) {
-        aaa = "";
-        while (offset < 1000) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(2));
-            {
-                std::lock_guard<std::mutex> lock(mMutex);
-                aaa = "";
-                offset -= 3;
-                aaa = getHexOnBufferByte(addr, offset, offset + 4, 4, false);
-                if (aaa == "64617461" || aaa == "44415441") {
-                    break;
-                }
-            }
-        }
-        offset -= 4;
-        dataChunkID = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
+    uint8_t* allSample = new uint8_t[sizeAllSample * containerCount];
+    memcpy(allSample, addr + offsetItem[3], sizeAllSample * containerCount);
+    std::cout << "Size 222: " << sizeAllSample * containerCount << "\n";
+    
+    if (cc != nullptr) {
+        std::lock_guard<std::mutex> lock(mMutex);
+        cc->onFileAllSampleToPlay(addr, offsetItem);   
     }
-    std::cout << "Data Chunk ID: " << dataChunkID << "\n";
-    long dataChunkSize = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
-    size_t numSamples = dataChunkSize / sbBlockAlign;
-    std::cout << "Data Chunk Size: " << dataChunkSize << "\n";
-    std::cout << "Num Sample: " << numSamples << "\n";
+    
+//    uint8_t* x;
+//    for (size_t i = 0; i < countMultiplySampleWithChannel; i++) {
+//        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+//        {
+//            std::lock_guard<std::mutex> lock(mMutex);
+//            
+//            int32_t sample = 0;
+//            uint8_t* sampleByte = (uint8_t*)(&sample);
+//            //char* sampleByte = (char*)(&sample);
+//            
+//            for (size_t b = 0; b < bytesPerSample; b++) {
+//                sampleByte[b] = addr[offset++];
+//            }
+//            
+//            if (bytesPerSample == 1) {
+//                sample += CHAR_MIN;
+//            }
+//            // Read the MSB sign bit
+//            else if (sampleByte[bytesPerSample - 1] & 0X80) {
+//                for (size_t b = bytesPerSample; b < sizeof(sample); b++) {
+//                    sampleByte[b] = 0XFF;
+//                }
+//            }
+//            
+//            //x[i] = (uint8_t)sample;
+//            
+//        }
+//        std::cout << "\tIndex: " << i << "\n";
+//    }
+//    std::cout << "Last Offset: " << offset << "\n";
     
     if (munmap(addr, fileInfo.st_size) == -1)
     {
@@ -113,41 +112,6 @@ void ReaderWav::onReadFileStructure(IReaderWav* cc, const std::string file_name)
     close(fd);
     
     if (cc != nullptr) {
-        cc->onFileStructure(file_name);
+        cc->onFileStructure(obj);
     }
-}
-
-std::string ReaderWav::getHexOnBufferByte(uint8_t* data, size_t& offset, const size_t limit, const size_t length, bool isLittleEndian) { 
-    std::string tempHex = "";
-    //std::cout << "Offset: " << offset << "\n";
-    for (; offset < limit; offset++) {
-        std::stringstream sss;
-        sss << std::hex << std::setfill('0');
-        sss << std::hex << std::setw(2) << static_cast<long>(data[offset]);
-        tempHex += sss.str();
-    }
-    if (isLittleEndian == true) {
-        std::string b[length];
-        std::string tempByteHex = "";
-        
-        size_t indexHex = 1;
-        size_t indexStarter = length - 1;
-        for (size_t i = 0; i < tempHex.size(); i++) {
-            tempByteHex += tempHex[i];
-            if (indexHex < 2)
-                indexHex++;
-            else {
-                b[indexStarter] = tempByteHex;
-                indexStarter--;
-                tempByteHex = "";
-                indexHex = 1;
-            }
-        }
-        
-        tempHex = "";
-        for (size_t i = 0; i < length; i++)
-            tempHex += b[i];
-    }
-    //std::cout << tempHex << "\n";
-    return tempHex;
 }
