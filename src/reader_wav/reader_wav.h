@@ -10,6 +10,9 @@
 #include <chrono>
 #include <thread>
 
+#include <math.h>
+#include <cmath>
+
 // for memory mapping
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,7 +26,11 @@
 #include <vector>
 #include <climits>
 
+#include </usr/include/alsa/asoundlib.h>
+
 #include <string.h>
+
+#define PCM_DEVICE "default"
 
 struct WAV {
     std::string chunk_id = "";
@@ -120,6 +127,7 @@ class ReaderWav {
 public: 
     ReaderWav();
     void onReadFileStructure(IReaderWav* cc, const std::string file_name);
+    void onDemo(IReaderWav* cc);
 protected:
     mutable std::mutex mMutex;
     std::string isProcessorLittleEndianness();
@@ -129,5 +137,9 @@ protected:
     std::string convertToASCII(const std::string hex);
     std::string getHexOnBufferByte(uint8_t* data, size_t& offset, const size_t limit, const size_t length, bool isLittleEndian);
     size_t findOffsetDataHeader(uint8_t* data, size_t& offset, const size_t indicator_reduce);
+    
+    WAV setWAV(uint8_t* data, size_t& offset);
+    
+    void onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end);
 };
 #endif

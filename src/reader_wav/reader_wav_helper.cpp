@@ -80,3 +80,29 @@ size_t ReaderWav::findOffsetDataHeader(uint8_t* data, size_t& offset, const size
     else
         return 0 + findOffsetDataHeader(data, valBeforeData, 3);
 }
+
+WAV ReaderWav::setWAV(uint8_t* addr, size_t& offset) {
+    
+    WAV obj;
+    
+    // ------ WAV Structure
+    obj.chunk_id = convertToASCII(getHexOnBufferByte(addr, offset, 4, 4, false));
+    obj.chunk_size = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.chunk_format = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
+    // ------ Format SubChunk
+    obj.sub_chunk_id = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
+    obj.sub_chunk_size = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.sub_chunk_format = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.channel = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.sample_rate = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.byte_rate = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.block_align = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    obj.bit_per_sample = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 2, 2, true));
+    offset = findOffsetDataHeader(addr, offset, 0);
+    std::string dataChunkID = convertToASCII(getHexOnBufferByte(addr, offset, offset + 4, 4, false));
+    obj.data_chunk_size = convertToDecimal(getHexOnBufferByte(addr, offset, offset + 4, 4, true));
+    obj.offset_first_sample = offset;
+    
+    return obj;
+    
+}
