@@ -12,6 +12,18 @@
 
 #include </usr/include/alsa/asoundlib.h>
 
+#include <iomanip>
+#include <sstream>
+#include <fstream> 
+// for memory mapping
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
 #define PCM_DEVICE "default"
 
 class Application : public Gtk::ApplicationWindow, public IReaderWav {
@@ -36,6 +48,8 @@ private:
     Gtk::TextView* tvLog;
     
     Gtk::Notebook* mainNotebook;
+    Gtk::Button* btnDemo1; 
+    Gtk::Button* btnRandomSample;
     
     std::thread* mainThread;
     ReaderWav readerWav;
@@ -43,6 +57,8 @@ private:
 protected:
     Glib::RefPtr<Gtk::Builder> builder;
     void getNewFile();
+    void demosound();
+    void sampleSound();
     
     class ModelFileColumns : public Gtk::TreeModel::ColumnRecord
     {

@@ -128,6 +128,7 @@ public:
     ReaderWav();
     void onReadFileStructure(IReaderWav* cc, const std::string file_name);
     void onDemo(IReaderWav* cc);
+    void onSample();
 protected:
     mutable std::mutex mMutex;
     std::string isProcessorLittleEndianness();
@@ -140,6 +141,7 @@ protected:
     
     WAV setWAV(uint8_t* data, size_t& offset);
     
-    void onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end);
+    void onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end, snd_pcm_uframes_t frames, 
+        std::string msg);
 };
 #endif
