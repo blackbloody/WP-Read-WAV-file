@@ -35,7 +35,7 @@ void ReaderWav::onDemo(IReaderWav* cc) {
         return;
     }
     
-    long microS = 1000000;
+    long microS = 100000;
     //long microS = 100000;
     pcm = snd_pcm_set_params(handler, 
         SND_PCM_FORMAT_S16, // format
@@ -55,20 +55,31 @@ void ReaderWav::onDemo(IReaderWav* cc) {
     std::cout << "Period size: " << period_size << "\n";
     std::cout << "Buffer size: " << bufsize << "\n";
     
-    snd_pcm_uframes_t frames = ((obj.num_sample_per_second()) * (obj.bit_per_sample / 8)) * obj.channel;
-    //frames += 1;
-    uint8_t* sample = new uint8_t[frames];
-    memcpy(sample, addr + offset, frames);
+    long samplePlay = obj.num_sample_per_second() * (0.1 / 1);
+    long frames = (samplePlay * (obj.bit_per_sample / 8)) * obj.channel;
+    std::cout << "Sample size: " << frames << "\n";
     
-    snd_pcm_uframes_t frames_play;
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    frames_play = snd_pcm_writei(handler, sample, bufsize);
-    onTimelapse(start, std::chrono::steady_clock::now(), frames_play, "");
+    while (1) {
+        
+        uint8_t* sample = new uint8_t[(long)frames];
+        memcpy(sample, addr + offset, (long)frames);
+
+        snd_pcm_uframes_t frames_play;
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        frames_play = snd_pcm_writei(handler, sample, samplePlay);
+        onTimelapse(start, std::chrono::steady_clock::now(), frames_play, "");
+
+        if (frames_play < 0)
+            frames_play = snd_pcm_recover(handler, frames_play, 0);
+        if (frames < 0) {
+            std::cout << "cannot writei buffer: " << snd_strerror(frames);
+            break;
+        }
+        offset += frames;
+        if (offset > obj.data_chunk_size)
+            break;
     
-    if (frames_play < 0)
-        frames_play = snd_pcm_recover(handler, frames_play, 0);
-    if (frames < 0) 
-        std::cout << "cannot writei buffer: " << snd_strerror(frames);
+    }
     
     pcm = snd_pcm_drain(handler);
     if (pcm < 0)
