@@ -4,7 +4,8 @@ void ReaderWav::onDemo(IReaderWav* cc) {
     
     struct stat fileInfo;
     uint8_t* addr;
-    std::string file_name = "/home/venom/Downloads/Doremifasolasido.wav";
+    std::string file_name = "/home/venom/Downloads/ClassroomOfTheEliteHeathens.wav";
+    //std::string file_name = "/home/venom/Downloads/Doremifasolasido.wav";
     const char* fileName = file_name.c_str();
     int fd = open(fileName, O_RDONLY);
     posix_fadvise(fd, 0, 0, 1);
@@ -16,8 +17,7 @@ void ReaderWav::onDemo(IReaderWav* cc) {
     
     std::cout << "Data size: " << obj.data_chunk_size << "\n";
     std::cout << "Byte rate: " << obj.byte_rate << "\n";
-    std::cout << "Sample details: " << obj.num_sample_per_second() << "\n";
-    std::cout << "Sample edit: " << (((obj.num_sample_per_second()) * (obj.bit_per_sample / 8)) * obj.channel) << "\n";
+    std::cout << "Num Sample Per Second: " << obj.num_sample_per_second() << "\n";
     
     ///////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -52,22 +52,39 @@ void ReaderWav::onDemo(IReaderWav* cc) {
     
     snd_pcm_uframes_t bufsize, period_size;
     snd_pcm_get_params(handler, &bufsize, &period_size);
-    std::cout << "Period size: " << period_size << "\n";
-    std::cout << "Buffer size: " << bufsize << "\n";
     
-    long samplePlay = obj.num_sample_per_second() * (0.1 / 1);
+    long samplePlay = obj.num_sample_per_second() * (0.012 / 1);
     long frames = (samplePlay * (obj.bit_per_sample / 8)) * obj.channel;
-    std::cout << "Sample size: " << frames << "\n";
     
+    std::cout << "Num Sample: " << samplePlay << "\n";
+    std::cout << "Byte: " << frames << "\n";
+    
+    long balanceData = obj.data_chunk_size;
+    long balanceSample = obj.num_sample();
+    
+    bool isBreakLastOffset = false;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     while (1) {
+        
+        balanceData = balanceData - frames;
+        balanceSample = balanceSample - samplePlay;
+        
+        if (balanceData == 0 || balanceSample == 0)
+            break;
+        
+        if (balanceSample < samplePlay) {
+            isBreakLastOffset = true;
+            samplePlay = balanceSample * (0.1 / 1);
+            frames = (samplePlay * (obj.bit_per_sample / 8)) * obj.channel;
+        }
         
         uint8_t* sample = new uint8_t[(long)frames];
         memcpy(sample, addr + offset, (long)frames);
 
         snd_pcm_uframes_t frames_play;
-        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        
         frames_play = snd_pcm_writei(handler, sample, samplePlay);
-        onTimelapse(start, std::chrono::steady_clock::now(), frames_play, "");
+        onTimelapse(start, std::chrono::steady_clock::now(), "", balanceData, balanceSample);
 
         if (frames_play < 0)
             frames_play = snd_pcm_recover(handler, frames_play, 0);
@@ -76,7 +93,7 @@ void ReaderWav::onDemo(IReaderWav* cc) {
             break;
         }
         offset += frames;
-        if (offset > obj.data_chunk_size)
+        if (offset > obj.data_chunk_size || isBreakLastOffset)
             break;
     
     }
