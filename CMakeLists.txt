@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.11.4)
+#cmake_minimum_required(VERSION 2.8)
 
 project(WP_WAV)
 
@@ -10,7 +11,7 @@ FIND_PACKAGE(ALSA)
 IF(ALSA_FOUND)
 	SET(WP_WAV_HAVE_ALSA TRUE)
 ELSE(ALSA_FOUND)
-	MESSAGE("ALSA does exist..need to install it libasound2-dev")
+	MESSAGE("ALSA does not exist..need to install it libasound2-dev")
 ENDIF(ALSA_FOUND)
 
 FIND_PACKAGE(PkgConfig)
@@ -25,7 +26,9 @@ FILE (GLOB_RECURSE SOURCE_LIBS_READER_WAV src/reader_wav/*.cpp)
 add_library(LIBS_READER_WAV SHARED ${SOURCE_LIBS_READER_WAV})
 target_include_directories(LIBS_READER_WAV PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/reader_wav )
 
-
+FILE (GLOB_RECURSE SOURCE_LIBS_SIGNAL_GL src/app/signal_reader/*.cpp)
+add_library(LIBS_SIGNAL_GL SHARED ${SOURCE_LIBS_SIGNAL_GL})
+target_include_directories(LIBS_SIGNAL_GL PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/app/signal_reader )
 
 add_executable(${CMAKE_PROJECT_NAME} src/main.cpp ${SOURCE_LIBS})
 
@@ -33,10 +36,18 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_D
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/app/models )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} LIBS_READER_WAV )
-target_link_libraries(${CMAKE_PROJECT_NAME} LIBS_READER_WAV )
+target_link_libraries(${CMAKE_PROJECT_NAME} LIBS_SIGNAL_GL )
 target_link_libraries(${CMAKE_PROJECT_NAME} ${GTKMM_LIBRARIES})
+
+find_package(SFML 2.5.1 COMPONENTS graphics REQUIRED)
+target_link_libraries(${CMAKE_PROJECT_NAME} sfml-graphics )
 
 IF(WP_WAV_HAVE_ALSA)
 	target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${ALSA_INCLUDE_DIRS})
 	target_link_libraries(${CMAKE_PROJECT_NAME} ${ALSA_LIBRARIES})
 ENDIF(WP_WAV_HAVE_ALSA)
+
+
+find_package(OpenGL)
+include_directories( ${OPENGL_INCLUDE_DIRS} )
+target_link_libraries(${CMAKE_PROJECT_NAME} ${OPENGL_LIBRARIES} )
