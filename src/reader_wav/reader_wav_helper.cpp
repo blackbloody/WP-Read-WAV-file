@@ -106,3 +106,39 @@ WAV ReaderWav::setWAV(uint8_t* addr, size_t& offset) {
     return obj;
     
 }
+
+void ReaderWav::onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end, 
+    std::string msg, long balanceDataCount, long balanceSampleCount) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        
+        std::cout << "/////////\n";
+        
+        std::cout << msg;
+        std::cout << balanceDataCount << " : " << balanceSampleCount << "\n";
+        
+        std::cout << "Elapsed time in nanoseconds: " << 
+            std::chrono::duration_cast<std::chrono::nanoseconds > (end - start).count() << " ns" << std::endl;
+        
+        std::cout << "Elapsed time in microseconds: " << 
+            std::chrono::duration_cast<std::chrono::microseconds > (end - start).count() << " µs" << std::endl;
+            
+        std::cout << "Elapsed time in milliseconds: " << 
+            std::chrono::duration_cast<std::chrono::milliseconds > (end - start).count() << " ms" << std::endl;
+        
+        float millis = (float)std::chrono::duration_cast<std::chrono::milliseconds > (end - start).count();
+        float sec = millis / 1000;
+        
+        std::cout << "Elapsed time in seconds: " << 
+            sec << " sec" << std::endl;
+            
+        if (sec >= 60) {
+            double min = sec / 60;
+            std::cout << "Elapsed time in minutes: " << 
+            min << " sec" << std::endl;
+        }
+            
+        std::cout << "/////////\n";
+    }
+}

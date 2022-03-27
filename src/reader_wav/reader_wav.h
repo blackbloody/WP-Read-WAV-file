@@ -30,6 +30,14 @@
 
 #include <string.h>
 
+// everything needed for embedding
+#include <pybind11/embed.h>  // py::scoped_interpreter
+#include <pybind11/stl.h>    // bindings from C++ STL containers to Python types
+#include <pybind11/numpy.h>
+#include <dlfcn.h>
+namespace py = pybind11;
+using namespace py::literals;
+
 #define PCM_DEVICE "default"
 
 struct WAV {
@@ -129,6 +137,18 @@ public:
     void onReadFileStructure(IReaderWav* cc, const std::string file_name);
     void onDemo(IReaderWav* cc);
     void onSample();
+    void * python;
+    
+    int create() {
+        python = dlopen("/usr/lib/x86_64-linux-gnu/libpython3.9.so", RTLD_NOW | RTLD_GLOBAL);
+        return 0;
+    }
+    
+    int destroy() {
+        dlclose(python);
+        return 0;
+    }
+    
 protected:
     mutable std::mutex mMutex;
     std::string isProcessorLittleEndianness();
@@ -141,7 +161,7 @@ protected:
     
     WAV setWAV(uint8_t* data, size_t& offset);
     
-    void onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end, snd_pcm_uframes_t frames, 
-        std::string msg);
+    void onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end, 
+        std::string msg, long balanceDataCount, long balanceSampleCount);
 };
 #endif

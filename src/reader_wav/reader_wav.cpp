@@ -10,7 +10,6 @@ std::string ReaderWav::isProcessorLittleEndianness() {
     return littleEndianness;
 }
 
-//template<class R>
 void ReaderWav::onReadFileStructure(IReaderWav* cc, const std::string file_name) {
     
     struct stat fileInfo;
@@ -25,32 +24,97 @@ void ReaderWav::onReadFileStructure(IReaderWav* cc, const std::string file_name)
         addr = static_cast<uint8_t*>(mmap(NULL, fileInfo.st_size, PROT_READ, MAP_SHARED, fd, 0));
     }
     
-    std::cout << "Size Whole File: " << fileInfo.st_size << "\n";
+    std::cout << "size file: " << fileInfo.st_size << "\n";
     size_t offset = 0;
     WAV obj = setWAV(addr, offset);
     
-    size_t containerCount = (obj.duration_milis() / 1000) + 1;
-    size_t sizeAllSample = obj.num_sample_per_second() * obj.bytes_per_sample();
-    std::vector<int> offsetItem;
-    offsetItem.reserve(containerCount);
-    for (size_t i = 0; i < containerCount; i++) 
-    {
-        offsetItem.push_back(offset);
-        std::cout << "Sample Offset " << i << ": " << offset << "\n";
-        offset += sizeAllSample;
-    }    
-
-    //uint8_t* allSample = new uint8_t[sizeAllSample * containerCount];
-    //memcpy(allSample, addr + obj.offset_first_sample, sizeAllSample * containerCount);
+    std::cout << "sample count : " << obj.num_sample() << "\n";
+    std::cout << "sample rate: " << obj.sample_rate << "\n";
     
-    uint8_t* allSample = new uint8_t[sizeAllSample * containerCount];
-    memcpy(allSample, addr + offsetItem[3], sizeAllSample * containerCount);
-    std::cout << "Size 222: " << sizeAllSample * containerCount << "\n";
+    // Calculate the length in seconds of the sample
+    float T = (float)obj.num_sample() / (float)obj.sample_rate;
+    std::cout << "a) " << T << "\n";
     
-    if (cc != nullptr) {
-        std::lock_guard<std::mutex> lock(mMutex);
-        cc->onFileAllSampleToPlay(addr, offsetItem);   
+    // Calculate the number of equidistant points in time
+    int n = (int) (T * obj.sample_rate) / 2;
+    std::cout << "b) " << n << "\n";
+    
+    // Calculate the time interval at each equidistant point
+    float h = (T / n);
+    std::cout << "c) " << h << "\n";
+    
+    bool isBigEndian = false;
+    unsigned int j=1;
+    char *xx =(char*)&j;
+    if (*xx==0)
+        isBigEndian = true;
+        
+    uint8_t* bData = new uint8_t[obj.data_chunk_size];
+    memcpy(bData, addr + offset, obj.data_chunk_size);
+    
+    // this array is the value of the signal at time i*h
+    int x[n];
+    for (size_t i = 0; i < n*2; i+=2) {
+        int b1 = bData[i];
+        int b2 = bData[i + 1];
+        if (b1 < 0) b1 += 0x100;
+        if (b2 < 0) b2 += 0x100;
+        
+        int value;
+        
+        //Store the data based on the original Endian encoding format
+        if (!isBigEndian) value = (b1 << 8) + b2;
+        else value = b1 + (b2 << 8);
+        x[i/2] = value;
     }
+    
+    double amplitude = 0;
+    double frequency = 0;
+    
+    std::cout << "time domain_: " << n << "\n";
+    std::cout << "time domain: " << (n/2) << "\n";
+    
+    size_t caout__ = 1;
+    
+    double f[n/2];
+    for (size_t j = 0; j < n/2; j++) {
+        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        {
+            //std::lock_guard<std::mutex> lock(mMutex);
+            
+            double firstSum = 0;
+            double secondSum = 0;
+            
+            for (size_t k = 0; k < n; k++) {
+                double twoPInjk = ((2 * M_PI) / n) * (j * k);
+                firstSum += x[k] * cos(twoPInjk);
+                secondSum += x[k] * sin(twoPInjk);
+            }
+            
+            f[j] = abs( sqrt(pow(firstSum,2) + pow(secondSum,2)) );
+            
+            amplitude = 2 * f[j]/n;
+            frequency = j * h / T * (float)obj.sample_rate;
+        }
+        caout__++;
+        
+        
+        std::cout << j << " <><><><><><><><><><> \n";
+        std::cout << "Amp: " << amplitude << "\n";
+        std::cout << "Freq: " << frequency << "\n";
+        
+        if (caout__ == 8)
+            break;
+    }
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        std::cout << f[0] << "\n";
+        std::cout << f[7] << "\n";   
+    }
+    
+    std::cout << "End: " << caout__ << "\n";
     
     if (munmap(addr, fileInfo.st_size) == -1)
     {
@@ -60,35 +124,5 @@ void ReaderWav::onReadFileStructure(IReaderWav* cc, const std::string file_name)
     
     if (cc != nullptr) {
         cc->onFileStructure(obj);
-    }
-}
-
-void ReaderWav::onTimelapse(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end, snd_pcm_uframes_t frames, 
-    std::string msg) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(3));
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        
-        std::cout << "/////////\n";
-        
-        std::cout << msg;
-        std::cout << frames << "\n";
-        
-        std::cout << "Elapsed time in nanoseconds: " << 
-            std::chrono::duration_cast<std::chrono::nanoseconds > (end - start).count() << " ns" << std::endl;
-        
-        std::cout << "Elapsed time in microseconds: " << 
-            std::chrono::duration_cast<std::chrono::microseconds > (end - start).count() << " µs" << std::endl;
-            
-        std::cout << "Elapsed time in milliseconds: " << 
-            std::chrono::duration_cast<std::chrono::milliseconds > (end - start).count() << " ms" << std::endl;
-        
-        float millis = (float)std::chrono::duration_cast<std::chrono::milliseconds > (end - start).count();
-        float sec = millis / 1000;
-        
-        std::cout << "Elapsed time in seconds: " << 
-            sec << " sec" << std::endl;
-            
-        std::cout << "/////////\n";
     }
 }

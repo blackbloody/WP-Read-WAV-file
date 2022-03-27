@@ -42,7 +42,7 @@ void ReaderWav::onSample() {
             break;
         }
     }
-    onTimelapse(start, std::chrono::steady_clock::now(), 0, "build-sample\n");
+    onTimelapse(start, std::chrono::steady_clock::now(), "build-sample\n", 0, 0);
     
     pcm = snd_pcm_drain(handler);
     if (pcm < 0)

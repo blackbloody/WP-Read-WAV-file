@@ -17,6 +17,12 @@ void ReaderWav::onDemo(IReaderWav* cc) {
     
     std::cout << "Data size: " << obj.data_chunk_size << "\n";
     std::cout << "Byte rate: " << obj.byte_rate << "\n";
+    std::cout << "Sample rate: " << obj.sample_rate << "\n";
+    std::cout << "Sample size: " << obj.num_sample() << "\n";
+    
+    float vall = 1 / (float)obj.sample_rate;
+    std::cout << "Sample in second: ";
+    std::cout << std::setprecision(6) << std::fixed << vall << std::endl;
     std::cout << "Num Sample Per Second: " << obj.num_sample_per_second() << "\n";
     
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +48,7 @@ void ReaderWav::onDemo(IReaderWav* cc) {
         SND_PCM_ACCESS_RW_INTERLEAVED, // access
         channels, // channel
         sampleRate, // rate
-        1, // 0 = disallow alsa-lib resample stream, 1 = allow resampling 
+        0, // 0 = disallow alsa-lib resample stream, 1 = allow resampling 
         microS // latency (0.5 seconds ... format is in microseconds)
         );
     if (pcm < 0) {
