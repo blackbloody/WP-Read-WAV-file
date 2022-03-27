@@ -32,6 +32,8 @@ target_include_directories(LIBS_SIGNAL_GL PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
 
 add_executable(${CMAKE_PROJECT_NAME} src/main.cpp ${SOURCE_LIBS})
 
+target_link_libraries(${CMAKE_PROJECT_NAME} ${CMAKE_DL_LIBS})
+
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/app/app_header )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/app/models )
 
@@ -41,6 +43,13 @@ target_link_libraries(${CMAKE_PROJECT_NAME} ${GTKMM_LIBRARIES})
 
 find_package(SFML 2.5.1 COMPONENTS graphics REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} sfml-graphics )
+
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${PYTHON_LIBRARIES})
+
+find_package(pybind11 REQUIRED) 
+target_link_libraries(${CMAKE_PROJECT_NAME} pybind11::embed)
 
 IF(WP_WAV_HAVE_ALSA)
 	target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${ALSA_INCLUDE_DIRS})
